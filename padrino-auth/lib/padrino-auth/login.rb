@@ -7,7 +7,7 @@ module Padrino
   # @example
   #   class Nifty::Application < Padrino::Application
   #     # optional settings
-  #     set :session_id, "visitor_id"       # visitor key name in session storage, defaults to "_login_#{app.app_name}")
+  #     set :session_key, "visitor_id"       # visitor key name in session storage, defaults to "_login_#{app.app_name}")
   #     set :login_model, :visitor          # model name for visitor storage, defaults to :account, must be constantizable
   #     set :credentials_accessor, :visitor # the name of setter/getter method in helpers, defaults to :credentials
   #     enable :login_bypass                # enables or disables login bypass in development mode, defaults to disable
@@ -42,7 +42,7 @@ module Padrino
       private
 
       def setup_storage(app)
-        app.default(:session_id, "_login_#{app.app_name}")
+        app.default(:session_key, "_login_#{app.app_name}")
         app.default(:login_model, :account)
         app.default(:credentials_accessor, :credentials)
         app.send :attr_reader, app.credentials_accessor unless app.instance_methods.include?(app.credentials_accessor)
@@ -112,13 +112,13 @@ module Padrino
 
       # Saves credentials in session.
       def save_credentials(resource)
-        session[settings.session_id] = resource.respond_to?(:id) ? resource.id : resource
+        session[settings.session_key] = resource.respond_to?(:id) ? resource.id : resource
         send(:"#{settings.credentials_accessor}=", resource)
       end
 
       # Restores credentials from session using visitor model.
       def restore_credentials
-        resource = login_model.authenticate(:id => session[settings.session_id])
+        resource = login_model.authenticate(:id => session[settings.session_key])
         send(:"#{settings.credentials_accessor}=", resource)
       end
 
