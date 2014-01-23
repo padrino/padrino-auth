@@ -1,184 +1,110 @@
-### Authorization-only example
+## Authorization and authentication modules for Padrino framework
 
-```ruby
-# sketchup some database model
-module Character
-  extend self
+### Overview
 
-  # db model must have authenticate method which should response with credentials object on
-  # the calls of { :email => 'a@b', :password => 'abc' } to authenticate by email and password
-  # or { :id => 42 } to restore credentials from id saved in session or another persistance storage
-  def authenticate(credentials)
-    case
-    when credentials[:email] && credentials[:password]
-      target = all.find{ |resource| resource.id.to_s == credentials[:email] }
-      target.name.gsub(/[^A-Z]/,'') == credentials[:password] ? target : nil
-    when credentials.has_key?(:id)
-      all.find{ |resource| resource.id == credentials[:id] }
-    else
-      false
-    end
-  end
+This padrino-auth provides the means to authenticate and authorize users.
+These modules are designed to be independent but compatible with each other.
 
-  # example collection of users
-  def all
-    @all = [
-      OpenStruct.new(:id => :bender,   :name => 'Bender Bending Rodriguez', :role => :robots  ),
-      OpenStruct.new(:id => :leela,    :name => 'Turanga Leela',            :role => :mutants ),
-      OpenStruct.new(:id => :fry,      :name => 'Philip J. Fry',            :role => :humans  ),
-      OpenStruct.new(:id => :ami,      :name => 'Amy Wong',                 :role => :humans  ),
-      OpenStruct.new(:id => :zoidberg, :name => 'Dr. John A. Zoidberg',     :role => :lobsters),
-    ]
-  end
-end
+### Padrino::Login, an authentication module for Padrino
 
-module Example; end
-# define an application class
-class Example::App < Padrino::Application
-  register Padrino::Access
+Authentication means identifying the user by comparing provided parameters
+(usually login or email and password) with the credentials stored in the
+application database and selecting the matched one. This module provides
+a simple login form and related helpers methods including saving and
+restoring user location.
 
-  # authorization module has no built-in persistance storage, so we have to implement it:
-  enable :sessions
-  helpers do
-    def credentials
-    puts settings.permissions.inspect
-      @visitor ||= Character.authenticate(:id => session[:visitor_id])
-    end
-    def credentials=(user)
-      @visitor = user
-      session[:visitor_id] = @visitor ? @visitor.id : nil
-    end
-  end
+#### Usage
 
-  # simple authentication controller
-  get(:login, :with => :id) do
-    # this is an example, do not authenticate by user id in real apps
-    self.credentials = Character.authenticate(:id => params[:id].to_sym)
-  end
+##### Holding a session
 
-  # allow everyone to visit '/login'
-  set_access :*, :allow => :login
+Make sure you have sessions enabled: `enable :sessions`.
 
-  # example action
-  get(:index){ 'foo' }
+If you use a different persistence storage you will have to make #session hash
+available to call in your app. `Padrino::Login` stores credentials `id` in
+session[settings.session_key]. You can customize session_key by calling
+`set :session_key, :current_credentials_id`. Default session_key name is
+`"_login_#{app.app_name}"`.
 
-  # robots are allowed to bend
-  set_access :robots, :allow => :bend
-  get(:bend){ 'bend' }
+##### Taming a model
 
-  # humans and robots are allowed to live on surface
-  controller :surface do
-    set_access :humans, :robots
-    get(:live) { 'live on the surface' }
-  end
+By default `Padrino::Login` uses credentials model name `Account`. You can
+customize it by setting `set :login_model, :user`.
 
-  # mutants are allowed to live on surface, humans are allowed to visit
-  controller :sewers do
-    set_access :mutants
-    set_access :humans, :allow => :visit
-    get(:live) { 'live in the sewers' }
-    get(:visit) { 'visit the sewers' }
-  end
-end
-```
+Usually a set of credentials are stored in application database. To access
+stored credentials `Padrino::Login` uses `Account.authenticate` class method.
+The Account model must provide this class method in at least two forms:
+authenticate with email/password, or with id. `Account.authenticate` is called
 
-That's it, rackup it and see what's up:
+ * with hash like `{ :email => 'user@example.com', :password => 'mypass' }`
+   to authenticate by email and password in response to user request
+ * with hash `{ :id => 42 }` to restore credentials from session
 
-http://localhost:9292/ => 403 shows Forbidden  
-http://localhost:9292/login/leela => 200 logs Leela in
+##### Accessing credentials (optional)
 
-Now we can see that Leela is allowed to live in sewers:
+To be able to access current credentials of the signed user your app will
+have to provide application helpers. By default `Padrino::Login` adds simple
+reader and writer with names `credentials` and `credentials=(user)`. You can
+customize helper name by setting `set :credentials_accessor, :visitor` and you
+can override default accessor by defining your own reader and writer helpers
+with the said names.
 
-http://localhost:9292/sewers/live => 200 live in sewers
+ * the reader is called before checking if the user is signed in
+ * the writer is called after authenticating user's credentials or restoring
+   it from session
 
-Now check if robots can bend and humans to visit sewers:
+##### Bypassing authentication (optional)
 
-http://localhost:9292/login/fry  
-http://localhost:9292/sewers/live  
-http://localhost:9292/sewers/visit
+By default this option is disabled. To enable it you can call
+`enable :login_bypass`. 
 
-http://localhost:9292/login/bender  
-http://localhost:9292/bend  
-http://localhost:9292/stop_partying
+In development environment it sometimes is convenient to be able to bypass
+authentication. If you do this you also have to extend your model
+`Account.authenticate` class method to be able to return default credentials in
+response to hash `{ :bypass => true }`. This way if the user authenticates with
+parameter `bypass` she will be assigned the credentials returned by you model
+and redirected to the stored location.
 
-### Authentication-only example
+##### Customizing the login process (optional)
 
-```ruby
-# sketchup some database model
-module Character
-  extend self
+By default `Padrino::Login` registers a simple login controller for your app
+and binds it to `/login`.
 
-  # db model must have authenticate method which should response with credentials object on
-  # the calls of { :email => 'a@b', :password => 'abc' } to authenticate by email and password
-  # or { :id => 42 } to restore credentials from id saved in session or another persistance storage
-  def authenticate(credentials)
-    case
-    when credentials[:email] && credentials[:password]
-      target = all.find{ |resource| resource.id.to_s == credentials[:email] }
-      (target && target.name.gsub(/[^A-Z]/,'') == credentials[:password]) ? target : nil
-    when credentials.has_key?(:id)
-      all.find{ |resource| resource.id == credentials[:id] }
-    else
-      false
-    end
-  end
+To customize this url it you can call `set :login_url, '/signin'`. Also it's
+possible to disable registering the default controller by calling
+`disable :login_controller`. If you do so you should provide a controller for
+your custom login url which on request of authentication will call
+`#authenticate` helper. If the result is true it should call
+`#restore_location`, else it should show an error. Or you can do whatever you
+like, it's your controller after all.
 
-  # example collection of users
-  def all
-    @all = [
-      OpenStruct.new(:id => :bender,   :name => 'Bender Bending Rodriguez', :role => :robots  ),
-      OpenStruct.new(:id => :leela,    :name => 'Turanga Leela',            :role => :mutants ),
-      OpenStruct.new(:id => :fry,      :name => 'Philip J. Fry',            :role => :humans  ),
-      OpenStruct.new(:id => :ami,      :name => 'Amy Wong',                 :role => :humans  ),
-      OpenStruct.new(:id => :zoidberg, :name => 'Dr. John A. Zoidberg',     :role => :lobsters),
-    ]
-  end
-end
+##### Synergizing with Padrino::Access and other things (info)
 
-module Example; end
-# define an application class
-class Example::App < Padrino::Application
-  set :login_model, :character
+`Padrino::Login` tries to inform `Padrino::Access` that `/login` url should be
+accessible for unauthenticated users by setting default
+`set(:login_permissions) { set_access(:*, :allow => :*, :with => :login) }`.
+Yes, it's a Proc and `Padrino::Access` tries to call it when registers itself.
 
-  register Padrino::Rendering
-  register Padrino::Helpers
-  register Padrino::Login
-  enable :sessions
+If you name your controller another way you must redefine this. If you use
+another authorization solution you also should configure it to allow visiting
+`/login` url without having to authenticate.
 
-  get(:index){ 'index' }
-  get(:restricted){ 'secret' }
+##### Redirecting the user (info)
 
-  # if we plan to add custom authorization we need to define #authorized? helper
-  helpers do
-    def authorized?
-      restricted = ['/restricted'].include?(request.env['PATH_INFO'])
-      if credentials
-        case 
-        when credentials.id == :bender
-          true
-        else
-          !restricted
-        end
-      else
-        !restricted
-      end
-    end
-  end
-end
-```
+To authenticate users `Padrino::Login` defines Sinatra `before_filter` which
+checks things and acts accordingly.
 
-After rackup we have:
+The first thing is if the user is already logged in. It uses the credentials
+reader we mentioned before, or tries to restore credentials from session.
 
-http://localhost:9292/ gets index  
-http://localhost:9292/restricted gets us redirected to '/login'
+The second thing is if the user is authorized to look at the requested page.
+To do so `Padrino::Login` calls `#authorized?` helper and checks it's bollean
+result. If this helper does not exist then your app is considered not requiring
+authorization. If it exists and responds with `true` then `before_filter`
+passes. If the helper exists and returns `false` then the user's location
+is saved and the user herself is redirected to login url.
 
-If we fill the form with 'leela' and her password 'TL' we get logged in and
-redirected to '/restricted' location we tried to visit earlier, but Leela has
-no access to it and we get 403 status.
+`#authorized?` helper should be defined in your app if you want access control.
 
-http://localhost:9292/login now if we visit '/login' again and ented 'bender'
-and his password 'BBR' we can get to '/restricted' location.
+##### Finally registering
 
-http://localhost:9292/restricted now gets 'secret' content
-
-TODO: add examples of using both Access and Login.
+Call `register Padrino::Login` and you are ready to roll.
