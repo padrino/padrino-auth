@@ -13,6 +13,7 @@ describe "Padrino::Access" do
       end
       get(:index){ 'foo' }
       get(:bend){ 'bend' }
+      get(:drink){ 'bend' }
       get(:subject){ self.send(settings.credentials_reader).inspect }
       get(:stop_partying){ 'stop partying' }
       controller :surface do
@@ -86,6 +87,13 @@ describe "Padrino::Access" do
     deny @bender, '/stop_partying'
     allow @fry, '/stop_partying'
     deny @fry, '/bend'
+  end
+
+  should 'set multiple action' do
+    # bender should be allowed to bend and drink
+    set_access @bender, :allow => [:drink, :bend]
+    allow @bender, '/drink'
+    allow @bender, '/bend'
   end
 
   should 'set object-specific access' do

@@ -98,11 +98,13 @@ module Padrino
     private
 
     # Merges a list of new permits into permissions storage.
-    def merge(subject, action, object_type)
+    def merge(subject, actions, object_type)
       subject_id = detect_id(subject)
       @permits[subject_id] ||= {}
-      @permits[subject_id][action] ||= []
-      @permits[subject_id][action] |= [object_type]
+      Array(actions).each do |action|
+        @permits[subject_id][action] ||= []
+        @permits[subject_id][action] |= [object_type]
+      end
     end
 
     # Checks if the subject has the role.
