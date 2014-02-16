@@ -108,3 +108,11 @@ is saved and the user herself is redirected to login url.
 ##### Finally registering
 
 Call `register Padrino::Login` and you are ready to roll.
+
+### Padrino::Access, an authorization module for Padrino
+
+https://github.com/padrino/padrino-framework/wiki/Padrino-authorization-module
+
+### Examples
+
+[EXAMPLES.md](EXAMPLES.md)
