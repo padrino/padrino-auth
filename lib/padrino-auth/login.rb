@@ -26,7 +26,7 @@ module Padrino
   module Login
     class << self
       def registered(app)
-        fail 'Padrino::Login must be registered before Padrino::Access' if app.respond_to?(:set_access)
+        warn 'Padrino::Login must be registered before Padrino::Access' if app.respond_to?(:set_access)
         included(app)
         setup_storage(app)
         setup_controller(app)

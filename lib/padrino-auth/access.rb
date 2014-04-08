@@ -48,6 +48,7 @@ module Padrino
       def registered(app)
         included(app)
         app.default(:credentials_reader, :credentials)
+        app.default(:access_errors, true)
         app.send :attr_reader, app.credentials_reader unless app.instance_methods.include?(app.credentials_reader)
         app.set :permissions, Permissions.new
         app.login_permissions if app.respond_to?(:login_permissions)
@@ -114,9 +115,17 @@ module Padrino
       # Checks if current visitor is allowed to to the action with object. Can accept a block.
       #
       def access_action?(action = nil, object = nil, &block)
-        if respond_to?(:request)
-          object ||= request.controller.to_s.to_sym
-          action ||= request.action.to_s.to_sym
+        return true if response.status/100 == 4 && settings.access_errors
+        if respond_to?(:request) && action.nil? && object.nil?
+          object = request.controller
+          action = request.action
+          if object.nil? && action.present? && action.to_s.index('/')
+            object, action = request.env['PATH_INFO'].to_s.scan(/\/([^\/]*)/).map(&:first)
+          end
+          object ||= :''
+          action ||= :index
+          object = object.to_sym
+          action = action.to_sym
         end
         settings.permissions.check(access_subject, :allow => action, :with => object, &block)
       end
@@ -131,8 +140,8 @@ module Padrino
       ##
       # Populates the list of objects the current visitor is allowed to interact with.
       #
-      def access_objects(subject = access_subject)
-        settings.permissions.find_objects(subject)
+      def access_objects(subject = access_subject, action = nil)
+        settings.permissions.find_objects(subject, action)
       end
     end
   end

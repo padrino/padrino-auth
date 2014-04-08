@@ -89,9 +89,10 @@ module Padrino
     # @param [Object] subject
     #   the subject to be checked for actions
     #
-    def find_objects(subject)
+    def find_objects(subject, target_action=nil)
       find_actions(subject).inject([]) do |all,(action,objects)|
-        all |= objects
+        all |= objects if target_action.nil? || action == target_action || action == :*
+        all
       end
     end
 
@@ -119,7 +120,7 @@ module Padrino
     # Checks if the subject is allowed to perform the action with the object.
     def check_action(subject, action, object)
       actions = find_actions(subject)
-      objects = actions && (actions[action] || actions[:*])
+      objects = actions && (Array(actions[action]) | Array(actions[:*]))
       objects && (objects & [:*, detect_type(object)]).any?
     end
 

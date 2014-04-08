@@ -27,11 +27,12 @@ describe "Padrino::Auth" do
   end
 
   it 'should fail if the order is wrong' do
-    assert_raises RuntimeError do
+    whine = capture_io do
       mock_app do
         register Padrino::Access
         register Padrino::Login
       end
     end
+    assert_match /must be registered before/, whine.to_s
   end
 end
