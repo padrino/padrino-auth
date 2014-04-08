@@ -1,11 +1,27 @@
-ENV['PADRINO_ENV'] = 'development'
+ENV['RACK_ENV'] = 'test'
 
-require File.expand_path('../../../load_paths', __FILE__)
-require File.dirname(__FILE__)+'/../../padrino-core/test/helper'
+require 'minitest/autorun'
+require 'rack/test'
+require 'rack'
+require 'padrino-core'
 require 'padrino-auth'
 
 # Helper methods for testing Padrino::Access
 class MiniTest::Spec
+  include Rack::Test::Methods
+
+  def mock_app(base=Padrino::Application, &block)
+    @app = Sinatra.new(base, &block)
+  end
+
+  def app
+    Rack::Lint.new(@app)
+  end
+
+  def status; last_response.status; end
+  def body; last_response.body; end
+  alias response last_response
+
   def set_access(*args)
     @app.set_access(*args)
   end

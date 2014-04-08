@@ -38,40 +38,40 @@ describe "Padrino::Access" do
     end
   end
 
-  should 'register with authorization module' do
+  it 'should register with authorization module' do
     assert @app.respond_to? :set_access
     assert_kind_of Padrino::Permissions, @app.permissions
   end
 
-  should 'properly detect access subject' do
+  it 'should properly detect access subject' do
     set_access :*
     get '/login/ami'
     get '/subject'
     assert_equal @ami.inspect, body
   end
 
-  should 'reset access properly' do
+  it 'should reset access properly' do
     set_access :*
     allow
     @app.reset_access!
     deny
   end
 
-  should 'set group access' do
+  it 'should set group access' do
     # only humans should be allowed on TV
     set_access :humans
     allow @fry
     deny @bender
   end
 
-  should 'set individual access' do
+  it 'should set individual access' do
     # only Fry should be allowed to romance Leela
     set_access @fry
     allow @fry
     deny @ami
   end
 
-  should 'set mixed individual and group access' do
+  it 'should set mixed individual and group access' do
     # only humans and Leela should be allowed on the surface
     set_access :humans
     set_access @leela
@@ -79,7 +79,7 @@ describe "Padrino::Access" do
     allow @leela
   end
 
-  should 'set action-specific access' do
+  it 'should set action-specific access' do
     # bender should be allowed to bend, and he's denied to stop partying
     set_access @bender, :allow => :bend
     set_access @fry, :allow => :stop_partying
@@ -89,14 +89,14 @@ describe "Padrino::Access" do
     deny @fry, '/bend'
   end
 
-  should 'set multiple action' do
+  it 'should set multiple action' do
     # bender should be allowed to bend and drink
     set_access @bender, :allow => [:drink, :bend]
     allow @bender, '/drink'
     allow @bender, '/bend'
   end
 
-  should 'set object-specific access' do
+  it 'should set object-specific access' do
     # only humans and Leela should be allowed to live on the surface
     # only mutants should be allowed to live in the sewers though humans can visit
     set_access :humans, :allow => :live, :with => :surface
@@ -110,7 +110,7 @@ describe "Padrino::Access" do
     allow @leela, '/sewers/live'
   end
 
-  should 'detect object when setting access from controller' do
+  it 'should detect object when setting access from controller' do
     # only humans and lobsters should have binocular vision
     @app.controller :binocular do
       set_access :humans, :lobsters
