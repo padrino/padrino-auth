@@ -7,7 +7,7 @@ require 'padrino-core'
 require 'padrino-auth'
 
 # Helper methods for testing Padrino::Access
-class MiniTest::Spec
+class Minitest::Spec
   include Rack::Test::Methods
 
   def mock_app(base=Padrino::Application, &block)

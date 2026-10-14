@@ -5,7 +5,7 @@ h3
 
 = form_tag( '', :class => 'form-horizontal well' ) do
   - [:error, :warning, :success, :notice].each do |type|
-    - next  if flash[type].blank?
+    - next  if flash[type].to_s.empty?
     .alert.alert-message class=('alert-' + (type == :notice ? :info : type).to_s) data-alert=true
       = flash[type]
 

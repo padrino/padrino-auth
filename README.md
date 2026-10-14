@@ -111,7 +111,8 @@ Call `register Padrino::Login` and you are ready to roll.
 
 ### Padrino::Access, an authorization module for Padrino
 
-https://github.com/padrino/padrino-framework/wiki/Padrino-authorization-module
+See the authorization examples in [EXAMPLES.md](EXAMPLES.md) and the usage notes
+in [lib/padrino-auth/access.rb](lib/padrino-auth/access.rb).
 
 ### Examples
 

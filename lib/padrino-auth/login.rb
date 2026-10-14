@@ -1,3 +1,4 @@
+require 'padrino-support/inflections'
 require 'padrino-auth/login/controller'
 
 module Padrino
@@ -61,7 +62,7 @@ module Padrino
     module InstanceMethods
       # Returns the model used to authenticate visitors.
       def login_model
-        @login_model ||= settings.login_model.to_s.classify.constantize
+        @login_model ||= Padrino::Inflections.constantize(Padrino::Inflections.classify(settings.login_model))
       end
 
       # Authenticates the visitor.
@@ -130,7 +131,7 @@ module Padrino
       # Saves location to session for following redirect in case of successful authentication.
       def save_location
         uri = env['REQUEST_URI'] || url(env['PATH_INFO'])
-        return if uri.blank? || uri.match(/\.css$|\.js$|\.png$/)
+        return if uri.to_s.empty? || uri.match(/\.css$|\.js$|\.png$/)
         session[:return_to] = "#{ENV['RACK_BASE_URI']}#{uri}"
       end
     end
