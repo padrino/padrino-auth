@@ -121,3 +121,74 @@ describe "Padrino::Login session" do
     assert_equal 302, status
   end
 end
+
+describe "Padrino::Login return location" do
+  before do
+    mock_app do
+      set :credentials_accessor, :visitor
+      set :login_model, :character
+      enable :sessions
+      register Padrino::Login
+      get(:index){ 'index' }
+      get(:restricted){ 'secret' }
+      get(:keep){ session[:return_to] = params[:to]; 'kept' }
+      helpers do
+        def authorized?
+          !!visitor || ['/', '/keep'].include?(request.env['PATH_INFO'])
+        end
+      end
+    end
+  end
+
+  def log_in_after(path, env = {})
+    get path, {}, env
+    assert_equal 302, status
+    post '/login', :email => :bender, :password => 'BBR'
+    response.location
+  end
+
+  it 'should return to the requested path with its query string' do
+    assert_equal 'http://example.org/restricted?page=2', log_in_after('/restricted?page=2')
+  end
+
+  it 'should return to this site after a request with an absolute target' do
+    location = log_in_after('/restricted', 'REQUEST_URI' => 'http://other.host/restricted')
+    assert_equal 'http://example.org/restricted', location
+  end
+
+  it 'should return to the root for a path starting with two slashes' do
+    @app.disable :absolute_redirects
+    location = log_in_after('/restricted', 'PATH_INFO' => '//other.host/restricted', 'REQUEST_URI' => '//other.host/restricted')
+    assert_equal '/', location
+  end
+
+  it 'should return to the root for a path starting with a slash and a backslash' do
+    @app.disable :absolute_redirects
+    location = log_in_after('/restricted', 'PATH_INFO' => '/\\other.host/restricted', 'REQUEST_URI' => '/\\other.host/restricted')
+    assert_equal '/', location
+  end
+
+  it 'should only return to a stored location on this site' do
+    @app.disable :absolute_redirects
+    ['http://other.host/x', '//other.host/x', '/\\other.host/x'].each do |stored|
+      get '/keep', :to => stored
+      assert_equal 'kept', body
+      post '/login', :email => :bender, :password => 'BBR'
+      assert_equal '/', response.location, stored
+    end
+    get '/keep', :to => '/restricted?page=2'
+    post '/login', :email => :bender, :password => 'BBR'
+    assert_equal '/restricted?page=2', response.location
+  end
+
+  it 'should return to the full path of an app mounted under a sub-path' do
+    @app.set :uri_root, '/sub'
+    mounted = Rack::URLMap.new('/sub' => @app)
+    define_singleton_method(:app) { Rack::Lint.new(mounted) }
+    get '/sub/restricted?page=2', {}, 'REQUEST_URI' => '/sub/restricted?page=2'
+    assert_equal 302, status
+    assert_equal 'http://example.org/sub/login', response.location
+    post '/sub/login', :email => :bender, :password => 'BBR'
+    assert_equal 'http://example.org/sub/restricted?page=2', response.location
+  end
+end

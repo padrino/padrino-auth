@@ -126,14 +126,22 @@ module Padrino
 
       # Redirects back to saved location or '/'
       def restore_location
-        redirect session.delete(:return_to) || url('/')
+        location = session.delete(:return_to)
+        redirect local_path?(location) ? location : url('/')
       end
 
       # Saves location to session for following redirect in case of successful authentication.
       def save_location
-        uri = env['REQUEST_URI'] || url(env['PATH_INFO'])
-        return if uri.to_s.empty? || uri.match(/\.css$|\.js$|\.png$/)
+        uri = request.fullpath
+        return if !local_path?(uri) || uri.match(/\.css$|\.js$|\.png$/)
         session[:return_to] = "#{ENV['RACK_BASE_URI']}#{uri}"
+      end
+
+      private
+
+      # Checks if the location is a path on this site.
+      def local_path?(location)
+        location.is_a?(String) && location.match?(%r{\A/(?![/\\])[^\x00-\x1f\x7f]*\z})
       end
     end
   end
