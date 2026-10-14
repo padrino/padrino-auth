@@ -1,3 +1,5 @@
+require 'padrino-support/inflections'
+
 module Padrino
   ##
   # Class to store and check permissions used in Padrino::Access.
@@ -42,7 +44,7 @@ module Padrino
     #
     def add(*args)
       @actions = {}
-      options = args.extract_options!
+      options = args.last.is_a?(Hash) ? args.pop : {}
       action, object = action_and_object(options)
       object_type = detect_type(object)
       args.each{ |subject| merge(subject, action, object_type) }
@@ -145,7 +147,7 @@ module Padrino
     def detect_type(object)
       case object
       when Symbol
-        object.to_s.singularize.to_sym
+        Padrino::Inflections.singularize(object).to_sym
       else
         object
       end

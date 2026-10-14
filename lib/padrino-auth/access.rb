@@ -83,8 +83,9 @@ module Padrino
       #   end
       #
       def set_access(*args)
-        options = args.extract_options!
-        options[:object] ||= Array(@_controller).first.to_s.singularize.to_sym if @_controller.present?
+        options = args.last.is_a?(Hash) ? args.pop : {}
+        controller = Array(@_controller).first
+        options[:object] ||= Padrino::Inflections.singularize(controller).to_sym if controller
         permissions.add(*args, options)
       end
     end
@@ -119,7 +120,7 @@ module Padrino
         if respond_to?(:request) && action.nil? && object.nil?
           object = request.controller
           action = request.action
-          if object.nil? && action.present? && action.to_s.index('/')
+          if object.nil? && action.to_s.index('/')
             object, action = request.env['PATH_INFO'].to_s.scan(/\/([^\/]*)/).map(&:first)
           end
           object ||= :''
@@ -134,7 +135,7 @@ module Padrino
       # Check if current visitor is allowed to interact with object by action. Can accept a block.
       #
       def access_object?(object = nil, action = nil, &block)
-        allow_action action, object, &block
+        access_action? action, object, &block
       end
 
       ##
