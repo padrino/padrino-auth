@@ -152,12 +152,13 @@ describe "Padrino::Login return location" do
   end
 
   it 'should return to the requested path under RACK_BASE_URI in any of its spellings' do
+    saved = ENV['RACK_BASE_URI']
     { 'base' => '/base', '/base' => '/base', '/base/' => '/base', '/' => '' }.each do |base_uri, prefix|
       begin
         ENV['RACK_BASE_URI'] = base_uri
         assert_equal "http://example.org#{prefix}/restricted?page=2", log_in_after('/restricted?page=2'), base_uri
       ensure
-        ENV.delete('RACK_BASE_URI')
+        ENV['RACK_BASE_URI'] = saved
       end
       clear_cookies
     end
