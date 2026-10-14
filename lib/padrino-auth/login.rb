@@ -111,8 +111,9 @@ module Padrino
         end
       end
 
-      # Saves credentials in session.
+      # Saves credentials in session. Renews the session id when signing in.
       def save_credentials(resource)
+        request.session_options[:renew] = true if resource
         session[settings.session_key] = resource.respond_to?(:id) ? resource.id : resource
         send(:"#{settings.credentials_accessor}=", resource)
       end

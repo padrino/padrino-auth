@@ -25,6 +25,9 @@ session[settings.session_key]. You can customize session_key by calling
 `set :session_key, :current_credentials_id`. Default session_key name is
 `"_login_#{app.app_name}"`.
 
+`Padrino::Login` renews the session id when a visitor signs in. To sign the
+visitor out, remove the stored id with `session.delete(settings.session_key)`.
+
 ##### Taming a model
 
 By default `Padrino::Login` uses credentials model name `Account`. You can

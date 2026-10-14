@@ -79,3 +79,45 @@ describe "Padrino::Access" do
     assert_equal 403, status
   end
 end
+
+describe "Padrino::Login session" do
+  before do
+    mock_app do
+      set :credentials_accessor, :visitor
+      set :login_model, :character
+      use Rack::Session::Pool
+      register Padrino::Login
+      get(:index){ session[:visited] = true; 'index' }
+      get(:restricted){ 'secret' }
+      helpers do
+        def authorized?
+          !!visitor || request.env['PATH_INFO'] == '/'
+        end
+      end
+    end
+  end
+
+  def session_cookie
+    last_response.headers['set-cookie'].to_s[/rack\.session=([^;]+)/, 1]
+  end
+
+  it 'should renew the session id at login' do
+    get '/'
+    old_id = session_cookie
+    refute_nil old_id
+
+    post '/login', :email => :bender, :password => 'BBR'
+    assert response.redirect?
+    new_id = session_cookie
+    refute_nil new_id
+    refute_equal old_id, new_id
+
+    get '/restricted'
+    assert_equal 'secret', body
+
+    clear_cookies
+    set_cookie "rack.session=#{old_id}"
+    get '/restricted'
+    assert_equal 302, status
+  end
+end
