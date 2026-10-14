@@ -192,3 +192,61 @@ describe "Padrino::Login return location" do
     assert_equal 'http://example.org/sub/restricted?page=2', response.location
   end
 end
+
+describe "Padrino::Login bypass" do
+  module BypassCharacter
+    extend self
+
+    def authenticate(credentials)
+      if credentials[:bypass]
+        Character.all.first
+      elsif credentials.has_key?(:id)
+        Character.all.find{ |resource| resource.id == credentials[:id] }
+      end
+    end
+  end
+
+  def bypass_app(environment)
+    mock_app do
+      set :environment, environment
+      set :credentials_accessor, :visitor
+      set :login_model, :bypass_character
+      enable :sessions
+      enable :login_bypass
+      register Padrino::Rendering
+      register Padrino::Login
+      get(:restricted){ 'secret' }
+      helpers Padrino::Helpers::AssetTagHelpers
+      helpers Padrino::Helpers::OutputHelpers
+      helpers Padrino::Helpers::TagHelpers
+      helpers Padrino::Helpers::FormHelpers
+      helpers do
+        def authorized?
+          !!visitor
+        end
+      end
+    end
+  end
+
+  it 'should honour login_bypass in development' do
+    bypass_app(:development)
+    get '/login'
+    assert_match 'Bypass', body
+    post '/login', :bypass => '1'
+    assert response.redirect?
+    get '/restricted'
+    assert_equal 'secret', body
+  end
+
+  it 'should only honour login_bypass in development' do
+    bypass_app(:production)
+    get '/login'
+    assert_equal 200, status
+    refute_match 'Bypass', body
+    post '/login', :bypass => '1'
+    assert_equal 200, status
+    assert_match 'Wrong password', body
+    get '/restricted'
+    assert_equal 302, status
+  end
+end

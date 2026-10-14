@@ -11,7 +11,7 @@ module Padrino
   #     set :session_key, "visitor_id"       # visitor key name in session storage, defaults to "_login_#{app.app_name}")
   #     set :login_model, :visitor          # model name for visitor storage, defaults to :account, must be constantizable
   #     set :credentials_accessor, :visitor # the name of setter/getter method in helpers, defaults to :credentials
-  #     enable :login_bypass                # enables or disables login bypass in development mode, defaults to disable
+  #     enable :login_bypass                # enables or disables login bypass in development mode (ignored in other environments), defaults to disable
   #     set :login_url, '/sign/in'          # sets the utl to be redirected to if not logged in and in restricted area, defaults to '/login'
   #     disable :login_permissions          # sets initial login permissions, defaults to { set_access(:*, :allow => :*, :with => :login) }
   #     disable :login_controller           # disables default login controller to show an example of the custom one
@@ -68,7 +68,7 @@ module Padrino
       # Authenticates the visitor.
       def authenticate
         resource = login_model.authenticate(:email => params[:email], :password => params[:password])
-        resource ||= login_model.authenticate(:bypass => true) if settings.login_bypass && params[:bypass]
+        resource ||= login_model.authenticate(:bypass => true) if settings.login_bypass && settings.development? && params[:bypass]
         save_credentials(resource)
       end
 

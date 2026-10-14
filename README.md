@@ -58,7 +58,8 @@ with the said names.
 ##### Bypassing authentication (optional)
 
 By default this option is disabled. To enable it you can call
-`enable :login_bypass`. 
+`enable :login_bypass`. It is honoured only in the development environment
+and ignored in all others.
 
 In development environment it sometimes is convenient to be able to bypass
 authentication. If you do this you also have to extend your model
