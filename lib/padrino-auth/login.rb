@@ -134,7 +134,8 @@ module Padrino
       def save_location
         uri = request.fullpath
         return if !local_path?(uri) || uri.match(/\.css$|\.js$|\.png$/)
-        session[:return_to] = "#{ENV['RACK_BASE_URI']}#{uri}"
+        base_uri = ENV['RACK_BASE_URI'].to_s.sub(%r{\A(?!/)}, '/').sub(%r{/+\z}, '')
+        session[:return_to] = "#{base_uri}#{uri}"
       end
 
       private

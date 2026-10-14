@@ -151,6 +151,18 @@ describe "Padrino::Login return location" do
     assert_equal 'http://example.org/restricted?page=2', log_in_after('/restricted?page=2')
   end
 
+  it 'should return to the requested path under RACK_BASE_URI in any of its spellings' do
+    { 'base' => '/base', '/base' => '/base', '/base/' => '/base', '/' => '' }.each do |base_uri, prefix|
+      begin
+        ENV['RACK_BASE_URI'] = base_uri
+        assert_equal "http://example.org#{prefix}/restricted?page=2", log_in_after('/restricted?page=2'), base_uri
+      ensure
+        ENV.delete('RACK_BASE_URI')
+      end
+      clear_cookies
+    end
+  end
+
   it 'should return to this site after a request with an absolute target' do
     location = log_in_after('/restricted', 'REQUEST_URI' => 'http://other.host/restricted')
     assert_equal 'http://example.org/restricted', location

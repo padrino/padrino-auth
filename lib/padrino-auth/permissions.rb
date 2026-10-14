@@ -128,7 +128,7 @@ module Padrino
     #   find_actions(@bender) # => { :kill => { :humans }, :drink => { :booze }, :* => { :login } }
     def find_actions(subject)
       actions = (@permits[detect_id(subject)] || {}).dup
-      if subject.respond_to?(:role) && (role_actions = @permits[subject.role.to_sym])
+      if subject.respond_to?(:role) && (role = subject.role) && (role_actions = @permits[role.to_sym])
         actions.merge!(role_actions){ |_,left,right| Array(left)|Array(right) }
       end
       if public_actions = @permits[:*]

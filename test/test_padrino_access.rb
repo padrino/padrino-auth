@@ -166,4 +166,13 @@ describe "Padrino::Permissions" do
     assert @permissions.check(Member.new(1, :admins), :allow => :manage, :with => :users)
     refute @permissions.check(Visitor.new(1, :members), :allow => :manage, :with => :users)
   end
+
+  it 'should check a subject without a role by its own and public permits' do
+    subject = Member.new(2, nil)
+    @permissions.add subject, :allow => :write, :with => :posts
+    @permissions.add :*, :allow => :read, :with => :news
+    assert @permissions.check(subject, :allow => :write, :with => :posts)
+    assert @permissions.check(subject, :allow => :read, :with => :news)
+    refute @permissions.check(subject, :allow => :manage, :with => :users)
+  end
 end
