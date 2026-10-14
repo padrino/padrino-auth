@@ -133,3 +133,46 @@ describe "Padrino::Access" do
     assert_equal 'false', body
   end
 end
+
+describe "Padrino::Permissions" do
+  Member = Struct.new(:id, :role)
+  Visitor = Struct.new(:id, :role)
+
+  before do
+    @permissions = Padrino::Permissions.new
+    @permissions.add :admins, :allow => :manage, :with => :users
+    @permissions.add :members, :allow => :read, :with => :posts
+  end
+
+  it 'should re-check role permissions when the role changes' do
+    subject = Member.new(1, :admins)
+    assert @permissions.check(subject, :allow => :manage, :with => :users)
+    subject.role = :members
+    refute @permissions.check(subject, :allow => :manage, :with => :users)
+    assert @permissions.check(subject, :allow => :read, :with => :posts)
+  end
+
+  it 'should re-check role permissions when the role changes after more permits are added' do
+    subject = Member.new(1, :admins)
+    @permissions.add subject, :allow => :write, :with => :posts
+    assert @permissions.check(subject, :allow => :manage, :with => :users)
+    @permissions.add :guests, :allow => :read, :with => :news
+    subject.role = :members
+    refute @permissions.check(subject, :allow => :manage, :with => :users)
+    assert @permissions.check(subject, :allow => :write, :with => :posts)
+  end
+
+  it 'should check subjects of different classes with the same id by their own role' do
+    assert @permissions.check(Member.new(1, :admins), :allow => :manage, :with => :users)
+    refute @permissions.check(Visitor.new(1, :members), :allow => :manage, :with => :users)
+  end
+
+  it 'should check a subject without a role by its own and public permits' do
+    subject = Member.new(2, nil)
+    @permissions.add subject, :allow => :write, :with => :posts
+    @permissions.add :*, :allow => :read, :with => :news
+    assert @permissions.check(subject, :allow => :write, :with => :posts)
+    assert @permissions.check(subject, :allow => :read, :with => :news)
+    refute @permissions.check(subject, :allow => :manage, :with => :users)
+  end
+end

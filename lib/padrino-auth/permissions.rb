@@ -16,14 +16,13 @@ module Padrino
     end
 
     ##
-    # Clears permit records and action cache.
+    # Clears permit records.
     #
     # @example
     #   permissions.clear!
     #
     def clear!
       @permits = {}
-      @actions = {}
     end
 
     ##
@@ -43,7 +42,6 @@ module Padrino
     #   permissions.add @bender, :allow => :kill, :object => :humans
     #
     def add(*args)
-      @actions = {}
       options = args.last.is_a?(Hash) ? args.pop : {}
       action, object = action_and_object(options)
       object_type = detect_type(object)
@@ -126,19 +124,17 @@ module Padrino
       objects && (objects & [:*, detect_type(object)]).any?
     end
 
-    # Finds all permits for the subject. Caches the permits in @actions.
+    # Finds all permits for the subject, its current role and everyone.
     #   find_actions(@bender) # => { :kill => { :humans }, :drink => { :booze }, :* => { :login } }
     def find_actions(subject)
-      subject_id = detect_id(subject)
-      return @actions[subject_id] if @actions[subject_id]
-      actions = @permits[subject_id] || {}
-      if subject.respond_to?(:role) && (role_actions = @permits[subject.role.to_sym])
+      actions = (@permits[detect_id(subject)] || {}).dup
+      if subject.respond_to?(:role) && (role = subject.role) && (role_actions = @permits[role.to_sym])
         actions.merge!(role_actions){ |_,left,right| Array(left)|Array(right) }
       end
       if public_actions = @permits[:*]
         actions.merge!(public_actions){ |_,left,right| Array(left)|Array(right) }
       end
-      @actions[subject_id] = actions
+      actions
     end
 
     # Returns object type.

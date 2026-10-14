@@ -11,7 +11,7 @@ module Padrino
   #     set :session_key, "visitor_id"       # visitor key name in session storage, defaults to "_login_#{app.app_name}")
   #     set :login_model, :visitor          # model name for visitor storage, defaults to :account, must be constantizable
   #     set :credentials_accessor, :visitor # the name of setter/getter method in helpers, defaults to :credentials
-  #     enable :login_bypass                # enables or disables login bypass in development mode, defaults to disable
+  #     enable :login_bypass                # enables or disables login bypass in development mode (ignored in other environments), defaults to disable
   #     set :login_url, '/sign/in'          # sets the utl to be redirected to if not logged in and in restricted area, defaults to '/login'
   #     disable :login_permissions          # sets initial login permissions, defaults to { set_access(:*, :allow => :*, :with => :login) }
   #     disable :login_controller           # disables default login controller to show an example of the custom one
@@ -68,7 +68,7 @@ module Padrino
       # Authenticates the visitor.
       def authenticate
         resource = login_model.authenticate(:email => params[:email], :password => params[:password])
-        resource ||= login_model.authenticate(:bypass => true) if settings.login_bypass && params[:bypass]
+        resource ||= login_model.authenticate(:bypass => true) if settings.login_bypass && settings.development? && params[:bypass]
         save_credentials(resource)
       end
 
@@ -111,8 +111,9 @@ module Padrino
         end
       end
 
-      # Saves credentials in session.
+      # Saves credentials in session. Renews the session id when signing in.
       def save_credentials(resource)
+        request.session_options[:renew] = true if resource
         session[settings.session_key] = resource.respond_to?(:id) ? resource.id : resource
         send(:"#{settings.credentials_accessor}=", resource)
       end
@@ -125,14 +126,23 @@ module Padrino
 
       # Redirects back to saved location or '/'
       def restore_location
-        redirect session.delete(:return_to) || url('/')
+        location = session.delete(:return_to)
+        redirect local_path?(location) ? location : url('/')
       end
 
       # Saves location to session for following redirect in case of successful authentication.
       def save_location
-        uri = env['REQUEST_URI'] || url(env['PATH_INFO'])
-        return if uri.to_s.empty? || uri.match(/\.css$|\.js$|\.png$/)
-        session[:return_to] = "#{ENV['RACK_BASE_URI']}#{uri}"
+        uri = request.fullpath
+        return if !local_path?(uri) || uri.match(/\.css$|\.js$|\.png$/)
+        base_uri = ENV['RACK_BASE_URI'].to_s.sub(%r{\A(?!/)}, '/').sub(%r{/+\z}, '')
+        session[:return_to] = "#{base_uri}#{uri}"
+      end
+
+      private
+
+      # Checks if the location is a path on this site.
+      def local_path?(location)
+        location.is_a?(String) && location.match?(%r{\A/(?![/\\])[^\x00-\x1f\x7f]*\z})
       end
     end
   end
