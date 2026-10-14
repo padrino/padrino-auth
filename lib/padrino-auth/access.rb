@@ -135,7 +135,7 @@ module Padrino
       # Check if current visitor is allowed to interact with object by action. Can accept a block.
       #
       def access_object?(object = nil, action = nil, &block)
-        allow_action action, object, &block
+        access_action? action, object, &block
       end
 
       ##

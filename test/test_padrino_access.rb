@@ -121,4 +121,15 @@ describe "Padrino::Access" do
     allow @zoidberg, '/binocular/vision'
     deny @leela, '/binocular/vision'
   end
+
+  it 'should check access to an object with access_object?' do
+    # only robots should be allowed to bend girders
+    set_access :*, :allow => :girders
+    set_access :robots, :allow => :bend, :with => :girders
+    @app.get(:girders) { access_object?(:girders, :bend).inspect }
+    allow @bender, '/girders'
+    assert_equal 'true', body
+    allow @fry, '/girders'
+    assert_equal 'false', body
+  end
 end
